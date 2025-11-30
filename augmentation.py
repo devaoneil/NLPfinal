@@ -1,72 +1,6 @@
 ''' Augmentation in comparison questions (x or y?)'''
-
 import random
 import regex as re
-
-
-def find_answer_in_context(context, answer_text):
-    """Find the character position of answer in context - written by Claude.ai"""
-    # Convert to lowercase for matching if needed
-    start = context.find(answer_text)
-    if start == -1:
-        # Try case-insensitive
-        start = context.lower().find(answer_text.lower())
-        if start != -1:
-            # Return position but keep original casing
-            return start
-    return start if start != -1 else 0  # Default to 0 if not found
-  
-def get_new_answer(answer, choices):
-    '''code from:
-    https://github.com/dDua/contrastive-estimation/blob/main/data/utils.py
-    Authors: Learning with Instance Bundles for Reading Comprehension
-    Dheeru Dua et al
-    '''
-    print("answer in get_new_answer:", answer)
-    print("Choices: ", choices)
-    choices = [c.strip() for c in choices]
-    new_answer = list(set(choices).difference(set([answer])))
-    #select from choices whichever one isn't answer
-    if len(new_answer) > 1:
-        print("multiple choices left")
-        return None
-    new_answer = new_answer[0].strip()
-    return new_answer
-
-    '''code from:
-    https://github.com/dDua/contrastive-estimation/blob/main/data/utils.py
-    Authors: Learning with Instance Bundles for Reading Comprehension
-    Dheeru Dua et al
-    '''
-'''def extract_answer_choices(question, answer):
-
-    new_answer, choice1, choice2 = None, None, None
-    regex1 = re.search(r'(,.+ or )', question)
-    regex2 = re.search(r'( or .+?[,?])', question)
-    #original: regex1, regex2 = re.search('(\,.+ or )', question),re.search('( or .+?[,|\,])', question)
-    if regex1 and regex2 and regex2.start() > regex1.start():
-        choice1 = question[regex1.start(): regex1.end()].split(" or ")[0].replace(",", "").strip()
-        choice2 = question[regex2.start(): regex2.end()].split(" or ")[-1].replace(",", "").strip()
-        new_answer = get_new_answer(answer, [choice1, choice2])
-        return new_answer, choice1, choice2
-
-    regex1 = re.search('(,.+ or )', question)
-    regex2 = re.search('( or .+?[,|?])', question)
-    if regex1 and regex2 and regex2.start() > regex1.start():
-        choice1 = question[regex1.start(): regex1.end()].split(" or ")[0].replace(",", "").strip()
-        choice2 = question[regex2.start(): regex2.end()].split(" or ")[-1].replace("?", "").strip()
-        new_answer = get_new_answer(answer, [choice1, choice2])
-
-    regex1, regex2 = re.search('(:.+ or )', question), re.search('( or .+)', question)
-    if regex1 and regex2 and regex2.start() > regex1.start():
-        choice1 = question[regex1.start(): regex1.end()].split(" or ")[0].replace(":", "").strip()
-        choice2 = question[regex2.start(): regex2.end()].split(" or ")[-1].replace("?", "").strip()
-        # choice1 = question[regex1.start(): regex1.end()].rstrip(" or").replace(":", "").strip()
-        # choice2 = question[regex2.start(): regex2.end()].lstrip("or ").replace("?", "").strip()
-        new_answer = get_new_answer(answer, [choice1, choice2])
-
-    return new_answer, choice1, choice2
-'''
 
 def extract_option_text(question):
     """
@@ -135,7 +69,38 @@ def extract_answer_choices(question, answer):
             print("No matching answer. answer = ", answer, " | options: ", options)
     return new_answer, choice1, choice2
 
-'''The following is written by me based on the code from Dheeru Dua et al'''
+
+def find_answer_in_context(context, answer_text):
+    """Find the character position of answer in context - written by Claude.ai"""
+    # Convert to lowercase for matching if needed
+    start = context.find(answer_text)
+    if start == -1:
+        # Try case-insensitive
+        start = context.lower().find(answer_text.lower())
+        if start != -1:
+            # Return position but keep original casing
+            return start
+    return start if start != -1 else 0  # Default to 0 if not found
+  
+def get_new_answer(answer, choices):
+    '''code from:
+    https://github.com/dDua/contrastive-estimation/blob/main/data/utils.py
+    Authors: Learning with Instance Bundles for Reading Comprehension
+    Dheeru Dua et al
+    '''
+    print("answer in get_new_answer:", answer)
+    print("Choices: ", choices)
+    choices = [c.strip() for c in choices]
+    new_answer = list(set(choices).difference(set([answer])))
+    #select from choices whichever one isn't answer
+    if len(new_answer) > 1:
+        print("multiple choices left")
+        return None
+    new_answer = new_answer[0].strip()
+    return new_answer
+
+'''The following function is mostly written by me but
+starts with a re-implementation of a function from Dheeru Dua et al'''
 #augment a single qa pair by returning its flipped version
 def pairwise_augmentation(pair): #randomizes punctuation after question stem and order of choices
     question, answer, id1 = pair
@@ -150,16 +115,13 @@ def pairwise_augmentation(pair): #randomizes punctuation after question stem and
                     [" has ", " does not have "],[" always ", " not always "], [" longer", " shorter"]]
     #if " or " in question:
     comp_options_match = [(c[0] in question or c[1] in question) for c in comp_options]
-    #print(comp_options_match)
     match = False
     for boolean in comp_options_match:
         if boolean: match = True
     if match is False: return None
-        #print(comp_options_match)
     for i in range(len(comp_options)):
         if comp_options_match[i]:
             options = comp_options[i]  #select desired comparison question by flipping
-            #print("Options are: ", options)
             if re.search(" fewer ", question):
                 new_question = question.replace(" fewer ", " more ") #special case - 'more' appears twice in options list
                 print("%%replacing ", " fewer ", "with", " more ", "in ", question)
@@ -180,8 +142,6 @@ def pairwise_augmentation(pair): #randomizes punctuation after question stem and
     new_question = question_truncate(new_question)
     punctuation = random.choice([",", ":"])
     aug_question1 = new_question+  punctuation
-            #print("choices[0] = ", choices[0])
-            #print("choices[1] = ", choices[1])
     aug_question1 += " " + choices[1]+ " or " + choices[0] + "?"
     augment_tuple = (aug_question1, other_answer, str(id1) + "_aug")
     print("returning: ", augment_tuple)
@@ -196,13 +156,11 @@ def question_truncate(question): #removes answer choices from comparative questi
     return question[:idx_separator]
 
 def qualifies_for_augmentation(ex):
-    
     q = ex["question"]
     pattern = r'.+[,:]\s*.+\s+or\s+.+' #regex by Claude.ai
         #return false if there are multiple ' or '
     if re.search(r'.+\sor\s.+\sor\s.+',q): return False
     
-        #return false if there are multiple ':',
         #eg Which of the following is NOT referenced by the EU's specification: the USB Battery Charging standard or IEC 62684:2011?
     if len(q.split(':'))>2: return False
     
@@ -210,8 +168,7 @@ def qualifies_for_augmentation(ex):
         #"Which is A: Y or Z?" or "What is A, X or Y?"  
     if re.search(pattern, q):
         if binary_question(q): return True#narrow down to binary questions only - see the following helper fxn
-
-    #print("%%%%%%%%q = ", q)       
+    
     return False
 
 ''' Helper function for qualifies_for_augmentation
@@ -235,7 +192,6 @@ def binary_question(q):
         return False
     
     elif len(splits )>= 3 and ' or ' in splits[-1]:
-        #print("WEIRD Non-binary Pattern: ", q)
         return False #"Which location is farther away from Bermuda, Miami, Florida or Cape Sable Island?"
 
     else: 
@@ -244,33 +200,19 @@ def binary_question(q):
     return False
 
 def help_create(example):
-    try:
-        q = example['question']
-    except:
-        print("NO question", flush = True)
-    try:
-        answer = example['answers']['text'][0]
-        if answer not in q:
-            return {"id": None} #not actually a comparison question
-    except:
-        print("NO ans", flush = True)
-        return {"id": None}
-    try:
-        qa_pairs = (q, answer, example['id'])
-    except:
-        print("NO Q/A Pair (No example['id'])", flush = True)
-        return {"id": None}
-    #don't need this; already in run.py  if not qualifies_for_augmentation(example): return {"id": None} #throws error if you try returning None due to map function in run.py
-
+    q = example['question']
+    print("NO question", flush = True)
+    answer = example['answers']['text'][0]
+    if answer not in q:
+        return {"id": None} #not actually a comparison question
+    qa_pairs = (q, answer, example['id'])
     try:
         #if pairwise_augmentation(qa_pairs) is None: return None
         aug_q, aug_a, aug_id  = pairwise_augmentation(qa_pairs)
-     
         print("\nNew question:",aug_q)
         print("original question:",example['question'])
         print("New Answer:",aug_a, "original answer:",answer)
-
-        #written by Claude
+        #these lines written by Claude:
         aug_example = { 
         "id": aug_id,
         "context": example["context"],
@@ -278,8 +220,7 @@ def help_create(example):
         "answers": {  
             "text": [aug_a],
             "answer_start": [find_answer_in_context(example["context"], aug_a)]
-    }
-}
+    }}
         return aug_example
     except:
         print("\nbad example: ", qa_pairs, flush = True)
@@ -291,7 +232,7 @@ def create_augmented_example(example):
     except:
         print("Unable to create")
         return {"id": None}
-    
+#for testing purposes, some examples.    
 def main():
     #generate two sample examples; both are comparison-type
     sample_passage = "Today, Warsaw has some of the best medical facilities in Poland and East-Central Europe. The city is home to the Children's Memorial Health Institute (CMHI), the highest-reference hospital in all of Poland, as well as an active research and education center. While the Maria Skłodowska-Curie Institute of Oncology it is one of the largest and most modern oncological institutions in Europe. The clinical section is located in a 10-floor building with 700 beds, 10 operating theatres, an intensive care unit, several diagnostic departments as well as an outpatient clinic. The infrastructure has developed a lot over the past years." 

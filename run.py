@@ -126,23 +126,21 @@ def main():
     eval_dataset_featurized = None
     if training_args.do_train:
         train_dataset = dataset['train']
-        #AUGMENT!!
+        
+        # AUGMENT   the following additions are by Claude.ai
         # Filter to only qualifying examples
         qualifying_dataset = train_dataset.filter(qualifies_for_augmentation,
-    load_from_cache_file=False)
-        #print("qualifying_dataset = ", qualifying_dataset)
+            load_from_cache_file=False)
         #print(qualifying_dataset[0])
-        #print(train_dataset[0])
-        print(f"Qualifying before filtering: {len(qualifying_dataset)}")
+        #print(f"Qualifying before filtering: {len(qualifying_dataset)}")
         augment_dataset = qualifying_dataset.map(create_augmented_example,
-        remove_columns=[],
-    load_from_cache_file=False)  # Keep all columns. # this line by Claude.ai
-        print(f"Before filtering: {len(augment_dataset)}")
+        remove_columns=[],load_from_cache_file=False)  # Keep all columns.  
+        #print(f"Before filtering: {len(augment_dataset)}")
         #remove the ones that don't qualify for augmentation (which is most of them)
         augment_dataset = augment_dataset.filter(lambda x: x['id'] is not None,
-    load_from_cache_file=False)
-  # this line by Claude.ai
-        train_dataset = concatenate_datasets([train_dataset, augment_dataset])
+            load_from_cache_file=False)
+        #turn on/off augmentation
+        #train_dataset = concatenate_datasets([train_dataset, augment_dataset])
         
         if args.max_train_samples:
             train_dataset = train_dataset.select(range(args.max_train_samples))
@@ -152,9 +150,9 @@ def main():
             num_proc=NUM_PREPROCESSING_WORKERS,
             remove_columns=train_dataset.column_names
         )
-        print(f"Original: {len(dataset['train'])}")
-        print(f"Qualifying: {len(augment_dataset)}")
-        print(f"After augmentation: {len(train_dataset)} Gives 0;  Should be ~31,000") 
+        print(f"Original (should be 30,000): {len(dataset['train'])}")
+        #print(f"Qualifying: {len(augment_dataset)}")
+        #print(f"After augmentation: {len(train_dataset)} Gives 0;  Should be ~31,000") 
     if training_args.do_eval:
         eval_dataset = dataset[eval_split]
         if args.max_eval_samples:
